@@ -12,7 +12,7 @@ Quantum image processing has recently been projected as a promising paradigm for
 
 ## Paper
 
-**Title:** SAHQR: Saliency-Aware Hybrid Quantum Image Representation for Medical Imaging Applications
+**Title:** Saliency-Aware Hybrid Quantum Image Representation for Efficient Medical Image Encoding
 
 **Target Journal:** Springer Neural Processing Letters
 
