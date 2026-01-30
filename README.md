@@ -81,7 +81,7 @@ SAHQR/
 
 ```bash
 # Clone the repository
-git clone https://github.com/MArbeeGit/SAHQR.git
+https://github.com/Vrushali-Nikam/Vrushali-Nikam-SAHQR
 cd SAHQR
 
 # Install dependencies
@@ -144,7 +144,9 @@ results = compare_all_methods(
 
 - SAHQR achieves the best compression ratio while maintaining content awareness
 - Statistical significance confirmed at p < 0.001 for all comparisons
-
+## PDF and .tex File
+- tex file: [SAHQR_Paper.tex]
+- pdf file: [Vrushali_SAHQR.pdf]
 
 
 ## License
@@ -155,7 +157,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Vrushali Sunil Nikam**
 - Email: [Vrushali.nik@gmail.com]
-- GitHub: [[MArbeeGit](https://github.com/Vrushali-Nikam/Vrushali-Nikam-SAHQR)]
+- GitHub: [Vrushali](https://github.com/Vrushali-Nikam/Vrushali-Nikam-SAHQR)]
 
 ## Acknowledgments
 
