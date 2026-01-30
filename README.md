@@ -14,7 +14,7 @@ This repository contains the implementation of **SAHQR (Saliency-Aware Hybrid Qu
 
 **Target Journal:** Springer Neural Processing Letters
 
-**Authors:** Mohd Mufiz Arbee
+**Authors:** Vrushali Sunil Nikam
 
 ## Key Features
 
@@ -145,19 +145,7 @@ results = compare_all_methods(
 - SAHQR achieves the best compression ratio while maintaining content awareness
 - Statistical significance confirmed at p < 0.001 for all comparisons
 
-## Citation
 
-If you use this code in your research, please cite:
-
-```bibtex
-@article{arbee2026sahqr,
-  title={SAHQR: Saliency-Aware Hybrid Quantum Image Representation for Medical Imaging Applications},
-  author={Arbee, Mohd Mufiz},
-  journal={Neural Processing Letters},
-  year={2026},
-  publisher={Springer}
-}
-```
 
 ## License
 
@@ -165,9 +153,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Contact
 
-**Mohd Mufiz Arbee**
-- Email: [arbee864@gmail.com]
-- GitHub: [MArbeeGit]
+**Vrushali Sunil Nikam**
+- Email: [Vrushali.nik@gmail.com]
+- GitHub: [[MArbeeGit](https://github.com/Vrushali-Nikam/Vrushali-Nikam-SAHQR)]
 
 ## Acknowledgments
 
