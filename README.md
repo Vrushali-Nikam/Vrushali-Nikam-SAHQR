@@ -7,6 +7,8 @@
 ## Overview
 
 This repository contains the implementation of **SAHQR (Saliency-Aware Hybrid Quantum Image Representation)**, a novel content-adaptive quantum image encoding scheme that leverages saliency detection to achieve efficient image compression while preserving diagnostically relevant regions.
+## Abstract 
+Quantum image processing has recently been projected as a promising paradigm for dealing with large-scale image data, providing exponentially better storage benefits than classical image processing. However, current quantum image representation techniques have limitations in terms of encoding efficiency, circuit complexity, and adaptability to image content characteristics. This paper proposes a novel quantum image representation technique called SAHQR (Saliency-Aware Hybrid Quantum Image Representation), which uses saliency detection to attain content-adaptive image representation. Unlike existing techniques that represent all regions of an image uniformly, SAHQR selectively focuses on salient regions and allocates quantum resources uniformly to their visual importance. The performance of SAHQR is comprehensively compared with ten modern quantum image representation techniques, namely FRQI, NEQR, GQIR, MCQI, QRMW, EFRQI, 2D-QSNA, INEQR, QPIE, and QLR, using ten evaluation criteria as number of qubits, circuit depth, gate complexity, encoding time, scalability, information loss, compression ratio, memory overhead, and implementation complexity. Experimental results on 6,097 medical images from the MINC database demonstrate that SAHQR achieves better compression ratios with comparable circuit complexity. To validate cross-domain generalization, we extended our evaluation to two additional challenging datasets: 2,000 Synthetic Aperture Radar (SAR) satellite imagery tiles and 2,298 Brain Tumor MRI scans. Statistical significance tests (p $<$ 0.001 for all comparisons) confirm that SAHQR provides statistically significant improvements over existing techniques across all three domains.
 
 ## Paper
 
@@ -145,8 +147,8 @@ results = compare_all_methods(
 - SAHQR achieves the best compression ratio while maintaining content awareness
 - Statistical significance confirmed at p < 0.001 for all comparisons
 ## PDF and .tex File
-- tex file: [SAHQR_Paper.tex]
-- pdf file: [Vrushali_SAHQR.pdf]
+- tex file: [SAHQR_Paper.tex](SAHQR_Paper.tex )
+- pdf file: [Vrushali_SAHQR.pdf](Vrushali_SAHQR.pdf )
 
 
 ## License
