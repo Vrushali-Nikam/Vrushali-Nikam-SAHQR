@@ -147,8 +147,11 @@ results = compare_all_methods(
 - SAHQR achieves the best compression ratio while maintaining content awareness
 - Statistical significance confirmed at p < 0.001 for all comparisons
 ## PDF and .tex File
-- tex file: [SAHQR_Paper.tex](SAHQR_Paper.tex )
-- pdf file: [Vrushali_SAHQR.pdf](Vrushali_SAHQR.pdf )
+- tex file: [Main Manuscript.tex](Main Manuscript.tex)
+- pdf file: [VSN-CSHQR_FINAL_PAPER.pdf](VSN-CSHQR_FINAL_PAPER.pdf)
+- Dataset1 :[Minc medical image dataset](https://nist.mni.mcgill.ca/bite-brain-images-of-tumors-for-evaluation-database/)
+- Dataset2 :[brain tumor dataset](https://figshare.com/articles/dataset/brain_tumor_dataset/1512427)
+- Dataset3 :[Sar dataset](https://www.iceye.com/lp/example-dataset-dwell-precise-rotterdam-netherlands)
 
 
 ## License
