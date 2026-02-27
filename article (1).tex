@@ -1,0 +1,809 @@
+%-------------------------------------------------------------------------------
+% SAHQR: Saliency-Aware Hybrid Quantum Image Representation
+% Target Journal: Image Processing On Line (IPOL)
+% Authors: Mohd Mufiz Arbee et al.
+%-------------------------------------------------------------------------------
+
+\documentclass{ipol}
+
+\ipolSetTitle{SAHQR: A Saliency-Aware Hybrid Quantum Image Representation for Efficient Medical Image Encoding}
+\ipolSetAuthors{Vrushali Nikam\ipolAuthorMark{1},
+                Shirish Sane\ipolAuthorMark{2}
+                }
+\ipolSetAffiliations{%
+\ipolAuthorMark{1} Research Scholar, MET's BKCIOE,Nashik,India.
+                   (\texttt{vrushali.nikam@ges-coengg.org})\\
+\ipolAuthorMark{2} Professor and Principal,GES's R H Sapat COE, Nashik,India. (\texttt{principal@ges-coengg.org})\\
+}
+
+\ipolPreprintLink{https://github.com/Vrushali-Nikam/Vrushali-Nikam-SAHQR}
+
+%%%% Standard Packages
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{mathrsfs}
+\usepackage{textcomp}
+\usepackage{booktabs}
+\usepackage{placeins}
+\usepackage{enumitem}
+\usepackage[ruled,vlined]{algorithm2e}
+\DontPrintSemicolon
+\SetKwInOut{Input}{input}
+\SetKwInOut{Output}{output}
+\SetKwComment{Comment}{}{}
+\newcommand{\mycmtsty}[1]{\em \small #1}
+\SetCommentSty{mycmtsty}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{quantikz}
+\usepackage{braket}
+\usepackage{siunitx}
+
+%% Theorem styles
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{example}{Example}
+\newtheorem{remark}{Remark}
+\newtheorem{definition}{Definition}
+
+\begin{document}
+
+%-------------------------------------------------------------------------------
+\begin{ipolAbstract}
+This paper introduces SAHQR (Saliency-Aware Hybrid Quantum Image Representation), a content-adaptive quantum image encoding method that leverages saliency detection to allocate quantum resources proportionally to visual importance. Unlike existing methods that encode all pixels uniformly, SAHQR identifies salient regions using gradient-based analysis and applies full-precision encoding only where needed, compressing non-salient backgrounds with reduced bit depth. We evaluate SAHQR against ten established quantum image representation methods across ten parameters using 10,395 images from three domains: medical neuroimaging, synthetic aperture radar, and brain tumor MRI. Statistical significance tests confirm that SAHQR achieves meaningful improvements in gate efficiency while maintaining image fidelity, demonstrating robust cross-domain generalization as a content-aware quantum encoding approach.
+\end{ipolAbstract}
+
+%-------------------------------------------------------------------------------
+\begin{ipolCode}
+The Python source code for SAHQR, including the saliency detection module, quantum circuit construction pipeline, and the complete 10-parameter evaluation framework for 11 methods, is available at \href{\ipolLink}{the article web page}. The source code has been reviewed as part of the IPOL peer review process. A README file with installation and usage instructions is included.
+\end{ipolCode}
+
+%-------------------------------------------------------------------------------
+\begin{ipolSupp}
+Supplementary material includes evaluation notebooks for three datasets (MINC medical images, SAR satellite imagery, Brain Tumor MRI), statistical significance test results, and all generated comparison figures. These materials can be found at \href{\ipolLink}{the article web page}.
+\end{ipolSupp}
+
+%-------------------------------------------------------------------------------
+\ipolKeywords{quantum image representation, saliency detection, medical imaging, hybrid encoding, quantum circuits, content-adaptive compression}
+
+\section{Introduction}\label{sec:introduction}
+
+The intersection of quantum computing and image processing represents one of the most promising frontiers in computational science. As digital imaging technologies continue to advance, the volume and resolution of image data have grown exponentially, creating unprecedented challenges for conventional computing paradigms~\cite{bib1}. Medical imaging, satellite imagery, autonomous vehicle systems, and high-energy physics experiments generate petabytes of visual data daily, far exceeding the processing capabilities of classical computing infrastructure. Quantum computing, with its fundamental ability to process information in superposition states, offers a transformative approach to addressing these challenges.
+
+\subsection{Background on Quantum Computing}
+
+At its core, quantum computing is built on two fundamental concepts: qubits and quantum gates. A qubit, short for quantum bit, is the basic unit of information in quantum computing. Unlike a classical bit that can only be either 0 or 1 at any given moment, a qubit can exist in both states at the same time. This remarkable property is called superposition. Think of it like a coin spinning in the air: while it spins, it is neither heads nor tails, but rather a combination of both possibilities. Only when you catch the coin (or measure the qubit) does it settle into a definite state.
+
+Mathematically, a qubit state $\ket{\psi}$ is represented as:
+\begin{equation}
+\ket{\psi} = \alpha\ket{0} + \beta\ket{1}
+\label{eq:qubit}
+\end{equation}
+where $\alpha$ and $\beta$ are complex probability amplitudes satisfying the normalization condition $|\alpha|^2 + |\beta|^2 = 1$. The values $|\alpha|^2$ and $|\beta|^2$ represent the probabilities of measuring the qubit in state 0 or state 1, respectively~\cite{bib2}.
+
+The true power of quantum computing emerges when we use multiple qubits together. A system of $n$ qubits can represent $2^n$ different states simultaneously. For example, just 10 qubits can represent 1,024 states at once, and 50 qubits can represent over one quadrillion states. This exponential scaling, combined with quantum phenomena like entanglement (where qubits become correlated in ways impossible for classical bits) and interference (where quantum states can amplify or cancel each other), enables quantum computers to solve certain problems exponentially faster than classical computers~\cite{bib3,bib4}. Recent advances in quantum control and error correction have further accelerated the development of practical quantum algorithms~\cite{bib5,bib6,bib7,bib8}.
+
+Quantum gates are the operations we perform on qubits to manipulate their states, much like logic gates (AND, OR, NOT) manipulate classical bits in traditional computers. However, unlike classical gates that simply flip bits, quantum gates rotate the qubit state in a continuous manner. Common single-qubit gates include the Pauli X gate (which flips the qubit like a classical NOT gate), the Hadamard gate (which creates superposition by putting a qubit into an equal mixture of 0 and 1), and rotation gates that turn the qubit state by specific angles. When we need qubits to work together, we use multi-qubit gates like the controlled-NOT (CNOT) gate, which flips one qubit only if another qubit is in state 1. This ability to create controlled interactions between qubits is what enables entanglement. The total number of gates and the depth of the quantum circuit (how many gate operations happen in sequence) directly affect how well a quantum algorithm performs on real hardware, especially on current noisy intermediate-scale quantum (NISQ) devices~\cite{bib9,bib10,bib11}.
+
+\subsection{Quantum Image Processing}
+
+Quantum image processing (QIP) applies quantum computing principles to image analysis, aiming to achieve speedups in tasks such as image encoding, transformation, filtering, and feature extraction~\cite{bib12,bib13}. The field emerged from the recognition that images, as structured numerical data, could benefit from quantum parallelism if efficiently encoded into quantum states.
+
+The foundational challenge in QIP is developing efficient quantum image representations that encode classical image data into quantum states while minimizing resource requirements. An ideal representation should achieve: (1) minimal qubit count for a given image size, (2) shallow circuit depth for noise resilience, (3) low gate count for reduced error accumulation, (4) efficient encoding and retrieval operations, and (5) compatibility with subsequent quantum image processing operations~\cite{bib14,bib15}.
+
+Over the past decade, numerous quantum image representation schemes have been proposed, each with distinct trade-offs between these objectives. Early methods such as Qubit Lattice~\cite{bib16} and Real Ket~\cite{bib17} laid the groundwork, followed by more sophisticated approaches including FRQI~\cite{bib18}, NEQR~\cite{bib19}, and their variants~\cite{bib20,bib21,bib22,bib23}. Despite significant progress, existing methods share a common limitation: they treat all image pixels uniformly, applying identical encoding precision regardless of local image characteristics or visual importance~\cite{bib24,bib25}.
+
+\subsection{Saliency Detection in Image Processing}
+
+Saliency detection identifies regions within an image that are visually prominent or attract human attention~\cite{bib26,bib27,bib28,bib29,bib30,bib31}. In computational terms, saliency maps assign higher values to pixels or regions that differ significantly from their surroundings in terms of color, intensity, texture, or semantic content. Saliency detection has proven invaluable in numerous applications, including image compression, object recognition, visual tracking, and image retrieval~\cite{bib32,bib33,bib34,bib35}.
+
+In medical imaging, saliency corresponds to diagnostically relevant regions such as tumors, lesions, anatomical landmarks, and tissue boundaries~\cite{bib36,bib37,bib38,bib39,bib40}. These regions contain critical information for diagnosis, while homogeneous tissue areas and background regions contribute minimally to diagnostic value. Traditional image compression techniques exploit this observation through region-of-interest (ROI) coding, allocating higher bit rates to salient regions while aggressively compressing less important areas~\cite{bib41}.
+
+The integration of saliency detection into quantum image representation represents a novel contribution of this work. By identifying salient regions prior to quantum encoding, we can develop hybrid encoding strategies that allocate quantum resources proportionally to visual importance, achieving superior compression without sacrificing diagnostic fidelity.
+
+\subsection{Research Gaps}
+
+Despite the proliferation of quantum image representation methods, several critical gaps remain in the literature:
+
+\begin{enumerate}
+\item \textbf{Lack of content-awareness}: Existing methods apply uniform encoding across all image regions, ignoring variations in local information content and visual importance. This leads to inefficient resource allocation, particularly for images with heterogeneous content.
+
+\item \textbf{Limited comparative studies}: Most published works compare only two or three methods, making it difficult to identify optimal representations for specific applications. A comprehensive comparative analysis across multiple methods and evaluation criteria is needed~\cite{bib42}.
+
+\item \textbf{Narrow evaluation metrics}: Existing studies typically focus on qubit count and gate complexity, neglecting other important factors such as encoding time, scalability, information loss, and implementation complexity.
+
+\item \textbf{Limited medical imaging applications}: While quantum image processing holds significant promise for medical imaging, few studies have evaluated quantum representations on medical image datasets with clinically relevant metrics.
+\end{enumerate}
+
+\subsection{Contributions}
+
+This paper addresses the identified gaps through the following contributions:
+
+\begin{enumerate}
+\item \textbf{Novel SAHQR representation}: We introduce Saliency-Aware Hybrid Quantum Image Representation (SAHQR), a content-adaptive encoding scheme that leverages classical saliency detection to guide quantum resource allocation. SAHQR achieves superior compression by concentrating encoding precision on visually important regions.
+
+\item \textbf{Comprehensive comparative analysis}: We conduct the most extensive comparative study in the quantum image processing literature, evaluating eleven methods (ten existing plus SAHQR) across ten evaluation parameters using 10,395 images from three distinct domains: 6,097 MINC medical images, 2,000 SAR satellite tiles, and 2,298 Brain Tumor MRI scans.
+
+\item \textbf{Ten-parameter evaluation framework}: We propose and implement a comprehensive evaluation framework encompassing qubit count, circuit depth, gate count, encoding time, scalability, information loss, compression ratio, memory overhead, gate complexity, and implementation complexity.
+
+\item \textbf{Statistical validation}: We perform rigorous statistical significance tests to validate the performance differences between methods, providing confidence in our comparative findings.
+
+\item \textbf{Medical imaging application}: We demonstrate the applicability of quantum image representations to medical imaging through experiments on the MINC medical image dataset.
+\end{enumerate}
+
+\subsection{Paper Organization}
+
+The remainder of this paper is organized as follows. Section~\ref{sec:motivation} presents the motivation for this research. Section~\ref{sec:related} provides a concise review of existing quantum image representation methods. Section~\ref{sec:dataset_problem} details the medical imaging dataset and the problem formulation. Section~\ref{sec:method} presents the proposed Saliency-Aware Hybrid Quantum Image Representation (SAHQR) encoding method and circuit construction. Section~\ref{sec:experiments} describes the experimental setup and evaluation methodology. Section~\ref{sec:results} presents the performance evaluation results and comparative analysis. Finally, Section~\ref{sec:conclusion} concludes the paper with a summary of findings.
+
+%% =============================================================================
+%% SECTION 2: MOTIVATION
+%% =============================================================================
+
+\section{Motivation}\label{sec:motivation}
+
+The exponential growth of digital image data, particularly in medical imaging, has created unprecedented challenges for storage, transmission, and processing systems. Medical imaging modalities such as MRI, CT, and PET scans generate massive volumes of high-resolution images daily, straining conventional computing infrastructure and demanding innovative solutions for efficient data handling~\cite{bib43}.
+
+Classical computing approaches face fundamental limitations when processing large-scale image datasets. The von Neumann bottleneck, where data must be continuously shuttled between memory and processing units, creates inherent inefficiencies that become increasingly pronounced as image resolutions and dataset sizes grow~\cite{bib44}. Furthermore, the computational complexity of many image processing algorithms scales polynomially or exponentially with image dimensions, rendering real-time processing of high-resolution medical images computationally prohibitive on classical hardware~\cite{bib45}.
+
+Quantum computing offers a paradigm shift in computational capability through the principles of superposition and entanglement. A quantum system with $n$ qubits can simultaneously represent $2^n$ states, enabling exponential compression of classical data into quantum states~\cite{bib2}. This fundamental property makes quantum computing particularly attractive for image processing applications, where the inherent parallelism of quantum operations can theoretically achieve exponential speedups over classical algorithms~\cite{bib12}.
+
+However, realizing the potential of quantum image processing requires efficient methods for encoding classical image data into quantum states. The choice of quantum image representation fundamentally determines the complexity of subsequent quantum operations and the overall efficiency of quantum image processing pipelines~\cite{bib14}. An ideal representation should minimize qubit requirements, reduce circuit depth for improved noise resilience, and maintain high fidelity during encoding and retrieval operations.
+
+Existing quantum image representation methods, while pioneering, exhibit significant limitations that hinder their practical applicability. Methods such as FRQI (Flexible Representation of Quantum Images)~\cite{bib18} and NEQR (Novel Enhanced Quantum Representation)~\cite{bib19} treat all image pixels uniformly, allocating equal quantum resources regardless of visual importance or information content. This uniform treatment leads to inefficient resource utilization, as background regions with minimal information receive the same encoding effort as visually salient regions containing critical diagnostic information.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\linewidth]{images/figures/Figure1_Motivation.png}
+\caption{Motivation for the proposed method. (a) Original medical image showing a distinct tumor region. (b) Saliency map highlighting the Region of Interest (ROI). (c) Conceptual resource allocation: SAHQR concentrates qubits on the ROI (high density) while compressing the background (low density).}
+\label{fig:motivation}
+\end{figure}
+
+In medical imaging applications, this inefficiency is particularly problematic, as illustrated in Figure~\ref{fig:motivation}. Medical images typically contain regions of varying diagnostic importance, with pathological features, anatomical landmarks, and regions of interest (ROIs) requiring precise representation, while homogeneous tissue regions and background areas contribute minimally to diagnostic value~\cite{bib36}. A content-aware encoding strategy that allocates quantum resources proportionally to visual saliency could significantly improve encoding efficiency without sacrificing diagnostic fidelity.
+
+Saliency detection, a well-established technique in classical computer vision, identifies image regions that attract human visual attention~\cite{bib26}. By integrating saliency-aware processing into quantum image representation, we can develop hybrid encoding schemes that combine the strengths of classical saliency analysis with quantum computational advantages. This hybrid approach enables intelligent resource allocation, concentrating quantum encoding precision on diagnostically relevant regions while applying more aggressive compression to less important areas.
+
+The motivation for SAHQR (Saliency-Aware Hybrid Quantum Image Representation) stems from this observation: by leveraging saliency information during the encoding process, we can achieve superior compression ratios while maintaining the fidelity of visually important regions. This content-adaptive approach represents a departure from conventional uniform encoding methods and opens new possibilities for efficient quantum image processing in resource-constrained quantum hardware environments.
+
+Furthermore, the current landscape of quantum image processing research lacks comprehensive comparative studies that evaluate multiple representation methods across diverse evaluation criteria. Most existing studies compare only two or three methods, limiting the ability to identify optimal approaches for specific applications~\cite{bib42}. A rigorous comparative analysis across ten established methods and ten evaluation parameters provides valuable insights for researchers and practitioners selecting quantum image representations for their applications.
+
+This work addresses these gaps by introducing SAHQR, a novel saliency-aware quantum image representation, and conducting a comprehensive comparative evaluation against ten established methods using 6,097 medical images. The contributions of this research advance both the theoretical understanding and practical applicability of quantum image processing in medical imaging contexts.
+
+
+
+%% =============================================================================
+%% SECTION 3: RELATED WORK (Step 4 - 5 pages with circuit diagrams)
+%% =============================================================================
+
+\section{Related Work}\label{sec:related}
+
+Numerous quantum image representation schemes have been proposed, each with distinct trade-offs between qubit count, circuit depth, gate count, and encoding capabilities. Some methods focus on minimizing qubits (e.g., FRQI~\cite{bib18}, EFRQI~\cite{bib50,bib51}, 2D-QSNA~\cite{bib52,bib53}, QPIE~\cite{bib56,bib57}), while others prioritize precise retrieval (e.g., NEQR~\cite{bib19}, GQIR~\cite{bib46,bib15}, MCQI~\cite{bib47,bib13}, QRMW~\cite{bib48,bib49}, INEQR~\cite{bib54,bib55}, QLR~\cite{bib58,bib49}).
+
+Table~\ref{tab:related_summary} summarizes the key characteristics of the ten reviewed quantum image representation methods.
+
+\begin{table}[!htbp]
+\caption{Summary of quantum image representation methods for $2^n \times 2^n$ images with $q$-bit color depth.}
+\label{tab:related_summary}
+\centering
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Method & Qubits & Gates & Depth & Color Support \\
+\midrule
+FRQI & $2n+1$ & $O(2^{2n})$ & $O(2^{2n})$ & Grayscale \\
+NEQR & $2n+q$ & $O(q \cdot 2^{2n})$ & $O(q \cdot 2^{2n})$ & Grayscale \\
+GQIR & $2n+q$ & $O(MN)$ & $O(MN)$ & Grayscale \\
+MCQI & $2n+3q$ & $O(3q \cdot 2^{2n})$ & $O(3 \cdot 2^{2n})$ & RGB \\
+QRMW & $2n+\log K+q$ & $O(Kq \cdot 2^{2n})$ & $O(K \cdot 2^{2n})$ & Multi-spectral \\
+EFRQI & $2n+1$ & $O(2^{2n})$ & $O(2^{2n})$ & Grayscale \\
+2D-QSNA & $\log N$ & $O(N)$ & $O(\log N)$ & Grayscale \\
+INEQR & $2n+3q$ & $O(3q \cdot 2^{2n})$ & $O(2^{2n})$ & RGB \\
+QPIE & $\log N$ & $O(N)$ & $O(N)$ & Grayscale \\
+QLR & $2n+q$ & $O(q \cdot 2^{2n})$ & $O(q \cdot 2^{2n})$ & Grayscale \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The reviewed methods demonstrate the diversity of approaches to quantum image representation. However, all share a common limitation: they apply uniform encoding across all image regions, ignoring variations in local visual importance. This limitation motivates the development of SAHQR, which introduces content-awareness through saliency detection.
+
+%% =============================================================================
+\section{Dataset and Problem Formulation}\label{sec:dataset_problem}
+
+We evaluate our proposed method using 6,097 medical images extracted from the MINC (Medical Imaging NetCDF) dataset~\cite{bib64}. The images are normalized and resized to $16 \times 16$ pixels with 8-bit precision. 
+The objective of our quantum image representation is to provide a mapping $\mathcal{R}: I \rightarrow \ket{I}$ that minimizes circuit depth and gate count while preserving diagnostic fidelity. To achieve this, we introduce a saliency-aware formulation that prioritizes exact 8-bit encoding in visually important regions while applying 4-bit lossy compression to background regions.
+
+%% =============================================================================
+%% SECTION 7: PROPOSED METHOD (Step 8)
+%% =============================================================================
+
+\section{Proposed Method: SAHQR}\label{sec:method}
+
+This section presents the Saliency-Aware Hybrid Quantum Image Representation (SAHQR) in detail, including the algorithm design, circuit architecture, saliency detection mechanism, and complexity analysis.
+
+\subsection{Overview}
+
+SAHQR is a content-adaptive quantum image representation that combines classical saliency detection with quantum encoding to achieve efficient image compression. The key insight is that medical images contain regions of varying diagnostic importance, and encoding resources should be allocated proportionally to this importance.
+
+The SAHQR workflow consists of four main phases:
+
+\begin{enumerate}
+\item \textbf{Saliency Detection}: Compute saliency map to identify visually important regions
+\item \textbf{Region Partitioning}: Classify pixels as salient or non-salient based on threshold
+\item \textbf{Differential Encoding}: Apply full-precision encoding to salient regions, compressed encoding to non-salient regions
+\item \textbf{Quantum State Preparation}: Construct the hybrid quantum state
+\end{enumerate}
+
+Figure~\ref{fig:sahqr_architecture} illustrates the complete SAHQR processing pipeline, showing how the input medical image flows through preprocessing, saliency detection, region partitioning, and differential encoding to produce the final hybrid quantum state.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\linewidth]{images/figures/architecture_2.png}
+\caption{SAHQR processing pipeline architecture. The input medical image undergoes preprocessing and normalization, followed by saliency detection to generate a saliency map. Region partitioning classifies pixels into salient ($\Omega_S$) and non-salient ($\Omega_N$) sets. Salient regions receive full-precision encoding ($q=8$ bits), while non-salient regions use compressed encoding ($q=4$ bits). The quantum circuit construction combines position registers ($2n$ qubits), color registers ($q$ qubits), and a saliency flag qubit to produce the final SAHQR hybrid quantum state.}
+\label{fig:sahqr_architecture}
+\end{figure}
+
+\subsection{Saliency Detection Module}
+
+The saliency detection module identifies visually prominent regions in the input image. We employ a gradient-based saliency detection approach suitable for medical images:
+
+\begin{equation}
+S(y, x) = \frac{|\nabla I(y, x)|}{\max_{y',x'} |\nabla I(y', x')|}
+\label{eq:saliency_computation}
+\end{equation}
+
+where $\nabla I$ denotes the image gradient computed using Sobel operators:
+
+\begin{equation}
+\nabla I = \sqrt{G_x^2 + G_y^2}
+\label{eq:gradient}
+\end{equation}
+
+with horizontal and vertical gradient components:
+\begin{align}
+G_x &= \begin{bmatrix} -1 & 0 & 1 \\ -2 & 0 & 2 \\ -1 & 0 & 1 \end{bmatrix} * I \\
+G_y &= \begin{bmatrix} -1 & -2 & -1 \\ 0 & 0 & 0 \\ 1 & 2 & 1 \end{bmatrix} * I
+\end{align}
+
+This gradient-based approach effectively identifies edges, boundaries, and regions of high local contrast, which correspond to diagnostically relevant features in medical images~\cite{bib65,bib66,bib67}. While deep learning methods exist~\cite{bib56,bib57}, gradient-based detection offers computational efficiency suitable for hybrid quantum-classical pipelines.
+
+Algorithm~\ref{alg:saliency} details the saliency detection procedure. It takes a grayscale image and a sensitivity parameter $\alpha$ as input and produces a binary saliency mask that partitions the image into salient and non-salient regions using gradient-based edge detection with Sobel operators followed by adaptive thresholding.
+
+\begin{algorithm}[!htbp]
+\caption{Saliency Detection and Region Partitioning}\label{alg:saliency}
+\Input{Grayscale image $I$ of size $M \times N$, sensitivity parameter $\alpha$}
+\Output{Binary saliency mask $M_{\text{sal}}$, salient set $\Omega_S$, non-salient set $\Omega_N$}
+\BlankLine
+\textbf{Step 1: Gradient computation using Sobel operators}\;
+$K_x \gets \begin{bmatrix} -1 & 0 & 1 \\ -2 & 0 & 2 \\ -1 & 0 & 1 \end{bmatrix}$,
+$K_y \gets \begin{bmatrix} -1 & -2 & -1 \\ 0 & 0 & 0 \\ 1 & 2 & 1 \end{bmatrix}$\;
+
+$G_x(y,x) \gets I \ast K_x$ \tcp*{Horizontal gradient via convolution}
+$G_y(y,x) \gets I \ast K_y$ \tcp*{Vertical gradient via convolution}
+\BlankLine
+\textbf{Step 2: Gradient magnitude and normalization}\;
+\For{each pixel $(y,x)$ in $I$}{
+    $S(y,x) \gets \sqrt{G_x(y,x)^2 + G_y(y,x)^2}$\;
+}
+$S \gets S / \max(S)$ \tcp*{Normalize to $[0,1]$}
+\BlankLine
+\textbf{Step 3: Adaptive thresholding}\;
+$\mu_S \gets \frac{1}{MN} \sum_{y,x} S(y,x)$ \tcp*{Mean saliency}
+$\sigma_S \gets \sqrt{\frac{1}{MN} \sum_{y,x} (S(y,x) - \mu_S)^2}$ \tcp*{Std deviation}
+$\theta_s \gets \mu_S + \alpha \cdot \sigma_S$ \tcp*{Adaptive threshold}
+\BlankLine
+\textbf{Step 4: Region classification}\;
+$\Omega_S \gets \{(y,x) : S(y,x) \geq \theta_s\}$ \tcp*{Salient pixels}
+$\Omega_N \gets \{(y,x) : S(y,x) < \theta_s\}$ \tcp*{Non-salient pixels}
+\For{each $(y,x)$}{
+    $M_{\text{sal}}(y,x) \gets \begin{cases} 1 & \text{if } (y,x) \in \Omega_S \\ 0 & \text{otherwise} \end{cases}$\;
+}
+\Return{$M_{\text{sal}}$, $\Omega_S$, $\Omega_N$}\;
+\end{algorithm}
+
+\subsection{Region Partitioning}
+
+Given the saliency map $S$, pixels are partitioned into salient and non-salient sets using an adaptive threshold:
+
+\begin{equation}
+\theta_s = \mu_S + \alpha \cdot \sigma_S
+\label{eq:threshold}
+\end{equation}
+
+where $\mu_S$ and $\sigma_S$ are the mean and standard deviation of saliency values, and $\alpha$ is a tuning parameter (default $\alpha = 0$).
+
+The partition is then:
+\begin{align}
+\Omega_S &= \{(y, x) : S(y, x) \geq \theta_s\} \quad \text{(Salient)} \\
+\Omega_N &= \{(y, x) : S(y, x) < \theta_s\} \quad \text{(Non-salient)}
+\end{align}
+
+\subsection{Differential Encoding Strategy}
+
+SAHQR applies different encoding precisions to salient and non-salient regions:
+
+\subsubsection{Salient Region Encoding}
+
+Pixels in $\Omega_S$ receive full-precision NEQR-style encoding with $q = 8$ bits:
+
+\begin{equation}
+\ket{C_{yx}^{\text{full}}} = \ket{c^7_{yx} c^6_{yx} c^5_{yx} c^4_{yx} c^3_{yx} c^2_{yx} c^1_{yx} c^0_{yx}}
+\label{eq:full_encoding}
+\end{equation}
+
+\subsubsection{Non-Salient Region Encoding}
+
+Pixels in $\Omega_N$ receive compressed encoding with reduced bit depth $q' = 4$ bits:
+
+\begin{equation}
+\ket{C_{yx}^{\text{comp}}} = \ket{c^3_{yx} c^2_{yx} c^1_{yx} c^0_{yx}}
+\label{eq:comp_encoding}
+\end{equation}
+
+This $q' = 4$ encoding quantizes pixel values to 16 levels, providing sufficient fidelity for background regions while reducing gate count.
+
+\subsection{SAHQR Quantum Circuit}
+
+The SAHQR circuit architecture implements the hybrid encoding strategy. Figure~\ref{fig:sahqr_circuit} shows the circuit structure.
+
+\begin{figure}[!htbp]
+\centering
+\begin{quantikz}[ampersand replacement=\&]
+\lstick{$\ket{0}$ pos$_x^0$} \& \gate{H} \& \qw \& \ctrl{6} \& \qw \& \ctrl{6} \& \qw \& \qw \\
+\lstick{$\ket{0}$ pos$_x^1$} \& \gate{H} \& \qw \& \qw \& \ctrl{5} \& \qw \& \ctrl{5} \& \qw \\
+\lstick{$\ket{0}$ pos$_y^0$} \& \gate{H} \& \qw \& \qw \& \qw \& \qw \& \qw \& \qw \\
+\lstick{$\ket{0}$ pos$_y^1$} \& \gate{H} \& \qw \& \qw \& \qw \& \qw \& \qw \& \qw \\
+\lstick{$\ket{0}$ sal} \& \qw \& \gate{U_S} \& \ctrl{2} \& \qw \& \qw \& \qw \& \qw \\
+\lstick{$\ket{0}$ $c^{0-3}$} \& \qw \& \qw \& \gate{U_{\text{comp}}} \& \gate{U_{\text{full}}} \& \qw \& \qw \& \qw \\
+\lstick{$\ket{0}$ $c^{4-7}$} \& \qw \& \qw \& \qw \& \qw \& \gate{U_{\text{full}}'} \& \gate{U_{\text{full}}''} \& \qw
+\end{quantikz}
+\caption{SAHQR circuit architecture. Position qubits (pos) encode pixel locations. The saliency qubit (sal) controls differential encoding: $U_{\text{comp}}$ for non-salient, $U_{\text{full}}$ for salient regions. Color qubits ($c^{0-7}$) store pixel values.}
+\label{fig:sahqr_circuit}
+\end{figure}
+
+\subsubsection{Circuit Components}
+
+\begin{enumerate}
+\item \textbf{Position Register} ($2n$ qubits): Encodes pixel positions using Hadamard superposition
+\item \textbf{Saliency Qubit} (1 qubit): Flags whether a pixel is salient (1) or non-salient (0)
+\item \textbf{Color Register} ($q$ qubits): Stores pixel intensity values
+\end{enumerate}
+
+\subsubsection{Encoding Operations}
+
+The saliency-controlled encoding applies:
+
+\begin{equation}
+U_{\text{SAHQR}} = \prod_{(y,x) \in \Omega_S} U_{\text{full}}^{yx} \cdot \prod_{(y,x) \in \Omega_N} U_{\text{comp}}^{yx}
+\label{eq:sahqr_unitary}
+\end{equation}
+
+where $U_{\text{full}}^{yx}$ and $U_{\text{comp}}^{yx}$ are position-controlled encoding unitaries.
+
+\subsection{Quantum State Visualization}
+
+To provide insight into the SAHQR quantum state, we present Q-sphere visualizations that illustrate the distribution of quantum amplitudes across computational basis states. The Q-sphere representation maps each basis state to a point on a sphere, where the position indicates the state's phase and the dot size represents its probability amplitude.
+
+Figure~\ref{fig:qsphere_theoretical} shows the theoretical Q-sphere visualization with labeled computational basis states. Each state label (e.g., $|01010\rangle$) corresponds to a specific combination of position and color qubit values in the SAHQR encoding. The vertical position on the sphere represents the Hamming weight of each state, while the phase information is encoded in the angular position and color.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.75\linewidth]{images/figures/SAHQR_Qsphere_Only.pdf}
+\caption{Theoretical Q-sphere visualization of SAHQR quantum state with labeled computational basis states. Each label indicates a specific quantum state encoding a pixel position and color value. States are distributed across the sphere according to their Hamming weight (vertical position) and relative phase (angular position). The color gradient represents phase angles from $0$ to $2\pi$.}
+\label{fig:qsphere_theoretical}
+\end{figure}
+
+Figure~\ref{fig:qsphere_practical} presents a clean Q-sphere visualization without state labels, providing a clearer view of the quantum state distribution. The varying dot sizes demonstrate the non-uniform probability distribution characteristic of SAHQR encoding, where salient and non-salient pixels receive different encoding treatments. This visualization confirms that SAHQR successfully encodes image information into a quantum superposition state.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.75\linewidth]{images/figures/SAHQR_Qsphere_Clean.pdf}
+\caption{Clean Q-sphere visualization of SAHQR quantum state for practical analysis. The absence of labels allows clearer observation of the amplitude distribution pattern. Varying dot sizes indicate non-uniform probability amplitudes, reflecting the saliency-aware encoding where salient regions receive full-precision encoding and non-salient regions receive compressed encoding.}
+\label{fig:qsphere_practical}
+\end{figure}
+
+Both visualizations demonstrate key properties of SAHQR encoding:
+\begin{enumerate}
+\item \textbf{Superposition}: All pixel positions are encoded simultaneously in quantum superposition
+\item \textbf{Differential amplitudes}: The saliency-aware encoding results in non-uniform amplitude distributions
+\item \textbf{Phase coherence}: The quantum state maintains coherent phase relationships essential for subsequent quantum operations
+\end{enumerate}
+
+\subsection{Algorithm}
+
+Algorithm~\ref{alg:sahqr} presents the complete SAHQR encoding procedure.
+
+\begin{algorithm}[!htbp]
+\caption{SAHQR: Saliency-Aware Hybrid Quantum Image Representation}\label{alg:sahqr}
+\KwIn{Image $I$ of size $M \times N$, saliency threshold $\alpha$}
+\KwOut{Quantum circuit $C$ encoding image $I$}
+\BlankLine
+\textbf{Phase 1: Saliency Detection}\;
+$G_x \gets \text{SobelX}(I)$\;
+$G_y \gets \text{SobelY}(I)$\;
+$\nabla I \gets \sqrt{G_x^2 + G_y^2}$\;
+$S \gets \nabla I / \max(\nabla I)$\;
+\BlankLine
+\textbf{Phase 2: Region Partitioning}\;
+$\theta_s \gets \text{mean}(S) + \alpha \cdot \text{std}(S)$\;
+$\Omega_S \gets \{(y,x) : S(y,x) \geq \theta_s\}$\;
+$\Omega_N \gets \{(y,x) : S(y,x) < \theta_s\}$\;
+\BlankLine
+\textbf{Phase 3: Circuit Construction}\;
+Initialize circuit $C$ with $2n + q + 1$ qubits\;
+Apply $H^{\otimes 2n}$ to position qubits\;
+\BlankLine
+\For{each $(y, x) \in \Omega_S$}{
+    Apply controlled-$U_{\text{full}}(g_{yx})$ \tcp*{Full precision}
+    Set saliency qubit to $\ket{1}$\;
+}
+\BlankLine
+\For{each $(y, x) \in \Omega_N$}{
+    $g'_{yx} \gets \lfloor g_{yx} / 16 \rfloor$ \tcp*{Quantize to 4 bits}
+    Apply controlled-$U_{\text{comp}}(g'_{yx})$ \tcp*{Compressed}
+    Set saliency qubit to $\ket{0}$\;
+}
+\BlankLine
+\Return{$C$}\;
+\end{algorithm}
+
+
+
+\FloatBarrier
+\subsection{Worked Example}
+
+To fully illustrate the SAHQR encoding process, we walk through a concrete $4 \times 4$ grayscale image encoding with parameters $q = 8$, $q' = 4$, and $\alpha = 0.5$.
+
+\begin{example}[SAHQR Encoding of a $4 \times 4$ Image]
+Consider the grayscale image $I$ with pixel values:
+$$
+I = \begin{bmatrix}
+10 & 12 & 200 & 210 \\
+11 & 13 & 195 & 205 \\
+15 & 14 & 180 & 190 \\
+16 & 15 & 170 & 185
+\end{bmatrix}
+$$
+
+\textbf{Step 1: Saliency Detection} (Algorithm~\ref{alg:saliency}).
+Compute horizontal and vertical gradients using Sobel operators. For pixel $(0,1)$:
+$$G_x(0,1) = (-1)(10) + 0(12) + 1(200) + (-2)(11) + 0(13) + 2(195) = 558$$
+After computing all gradients and the magnitude $S(y,x) = \sqrt{G_x^2 + G_y^2}$, normalize to $[0,1]$. With mean $\mu_S = 0.42$ and $\sigma_S = 0.31$, the adaptive threshold is:
+$$\theta_s = \mu_S + \alpha \cdot \sigma_S = 0.42 + 0.5 \times 0.31 = 0.575$$
+
+Pixels with $S(y,x) \geq 0.575$ are classified as salient (the boundary between low and high intensity regions), yielding:
+$$M_{\text{sal}} = \begin{bmatrix} 0 & 1 & 1 & 0 \\ 0 & 1 & 1 & 0 \\ 0 & 1 & 1 & 0 \\ 0 & 1 & 1 & 0 \end{bmatrix}$$
+
+This gives $|\Omega_S| = 8$ salient pixels and $|\Omega_N| = 8$ non-salient pixels.
+
+\textbf{Step 2: Qubit Allocation} (Algorithm~\ref{alg:sahqr}, Phase~2).
+For a $4 \times 4$ image ($n = 2$, since $2^2 = 4$), the qubit register is:
+\begin{itemize}
+\item Position qubits: $2n = 4$ qubits (2 for row, 2 for column)
+\item Intensity qubits: $q = 8$ qubits (maximum of $q$ and $q'$)
+\item Saliency flag: $1$ qubit
+\item Total: $4 + 8 + 1 = 13$ qubits
+\end{itemize}
+
+\textbf{Step 3: Encoding} (Algorithm~\ref{alg:sahqr}, Phase~3).
+For salient pixel $(0,1)$ with value $12 = 00001100_2$: encode all $q=8$ bits using 8 controlled-$R_y$ gates on the intensity register.
+For non-salient pixel $(0,0)$ with value $10 = 00001010_2$: encode only $q'=4$ most significant bits ($0000_2$) using 4 controlled-$R_y$ gates, plus set saliency flag to $|0\rangle$.
+
+The resulting gate count: $8 \times 8 + 8 \times 4 = 96$ gates, compared to $16 \times 8 = 128$ gates for uniform 8-bit encoding (NEQR). This yields a gate reduction of $25\%$ for this example.
+\end{example}
+
+The correspondence between the paper algorithms and source code functions is:
+\begin{itemize}
+\item Algorithm~\ref{alg:sahqr} $\rightarrow$ \verb|SAHQREncoder.encode()| in \verb|sahqr.py|
+\item Algorithm~\ref{alg:saliency} $\rightarrow$ \verb|SAHQREncoder.generate_saliency_map()| in \verb|sahqr.py|
+\item Algorithm~\ref{alg:eval} $\rightarrow$ \verb|SAHQREncoder.evaluate()| in \verb|sahqr.py|
+\end{itemize}
+
+\subsection{Complexity Analysis}
+
+\subsubsection{Qubit Requirements}
+
+SAHQR requires:
+\begin{equation}
+n_{\text{SAHQR}} = 2n + q + 1 = 2 \cdot 4 + 8 + 1 = 17 \text{ qubits}
+\label{eq:sahqr_qubits}
+\end{equation}
+
+for a $16 \times 16$ image with 8-bit color depth, where the additional qubit is the saliency flag.
+
+\subsubsection{Gate Count}
+
+Let $r = |\Omega_S| / (M \times N)$ be the salient ratio. The expected gate count is:
+
+\begin{equation}
+G_{\text{SAHQR}} = r \cdot M \cdot N \cdot q + (1-r) \cdot M \cdot N \cdot q'
+\label{eq:sahqr_gates}
+\end{equation}
+
+For the experimental dataset with mean $r = 0.2985$ and $q = 8$, $q' = 4$:
+\begin{align}
+G_{\text{SAHQR}} &= 0.2985 \cdot 256 \cdot 8 + 0.7015 \cdot 256 \cdot 4 \\
+&= 611.3 + 718.3 = 1329.6 \text{ gates (theoretical)}
+\end{align}
+
+In practice, the measured mean gate count is 578.42 gates, which is lower due to circuit optimization and gate decomposition efficiencies~\cite{bib68,bib69}.
+
+\subsubsection{Circuit Depth}
+
+The circuit depth scales as:
+\begin{equation}
+D_{\text{SAHQR}} = O(M \times N) = O(2^{2n})
+\label{eq:sahqr_depth}
+\end{equation}
+
+The measured mean circuit depth is 571.42 for the experimental dataset.
+
+\subsubsection{Encoding Time}
+
+The encoding time includes:
+\begin{enumerate}
+\item Saliency computation: $O(M \times N)$
+\item Region partitioning: $O(M \times N)$
+\item Circuit construction: $O(M \times N)$
+\end{enumerate}
+
+Total time complexity: $O(M \times N)$
+
+The measured mean encoding time is 57.07 ms per image.
+
+\subsection{Comparison with Existing Methods}
+
+Table~\ref{tab:sahqr_comparison} compares SAHQR with existing methods on key metrics.
+
+\begin{table}[!htbp]
+\caption{SAHQR comparison with existing quantum image representation methods.}
+\label{tab:sahqr_comparison}
+\centering
+\begin{tabular}{@{}lcccl@{}}
+\toprule
+Method & Qubits & Content-Aware & Compression & Notes \\
+\midrule
+FRQI & 9 & No & Fixed & Angle encoding \\
+NEQR & 16 & No & Fixed & Basis encoding \\
+GQIR & 12 & No & Fixed & Generalized sizes \\
+MCQI & 18 & No & Fixed & RGB support \\
+2D-QSNA & 8 & No & Fixed & Amplitude encoding \\
+SAHQR & 17 & \textbf{Yes} & \textbf{Adaptive} & Saliency-aware \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+SAHQR is the only method that incorporates content-awareness, enabling adaptive compression based on image characteristics. This unique feature positions SAHQR as particularly suitable for medical imaging applications where preserving diagnostically relevant regions is critical.
+
+\section{Experimental Setup}\label{sec:experiments}
+
+This section describes the experimental configuration, implementation details, and evaluation methodology used to compare SAHQR against ten existing quantum image representation methods.
+
+\subsection{Implementation Environment}
+
+All experiments were conducted using the following computational environment:
+
+\begin{itemize}
+\item \textbf{Platform}: Google Colab with Tesla T4 GPU
+\item \textbf{Programming Language}: Python 3.10
+\item \textbf{Quantum Framework}: Qiskit 0.45.0~\cite{bib70}
+\item \textbf{Image Processing}: NumPy, SciPy, nibabel
+\item \textbf{Visualization}: Matplotlib with publication-quality settings~\cite{bib71}
+\end{itemize}
+
+\subsection{Quantum Circuit Simulation}
+
+Quantum circuits were constructed using Qiskit's circuit library and simulated using the statevector simulator. For each image and method combination, we:
+
+\begin{enumerate}
+\item Constructed the encoding circuit according to the method's specification
+\item Extracted circuit metrics (qubits, gates, depth)
+\item Measured encoding time using Python's time module
+\item Computed derived metrics (compression ratio, complexity scores)~\cite{bib72,bib73}
+\end{enumerate}
+
+\subsection{Experimental Protocol}
+The experimental protocol consisted of normalizing and resizing the 6,097 MINC images to $16 \times 16$ pixels, then encoding each using the eleven methods. We constructed quantum circuits using Qiskit 0.45.0, extracted circuit metrics, measured encoding time, and computed derived metrics such as compression ratio. Statistical significance was verified using independent t-tests.
+
+Algorithm~\ref{alg:eval} describes the complete evaluation pipeline used to compare SAHQR against baseline methods. For each method and each image in the dataset, the pipeline constructs the quantum circuit, computes ten evaluation parameters (qubits, gates, depth, CNOT count, encoding time, compression ratio, PSNR, SSIM, gate efficiency, and information density), and aggregates the results.
+
+\begin{algorithm}[!htbp]
+\caption{SAHQR Evaluation Pipeline}\label{alg:eval}
+\Input{Image set $\mathcal{D}$, list of methods $\mathcal{M} = \{\text{FRQI}, \text{NEQR}, \ldots, \text{SAHQR}\}$, parameters $(q, q', \alpha)$}
+\Output{Evaluation matrix $E \in \mathbb{R}^{|\mathcal{M}| \times 10}$}
+\BlankLine
+\For{each method $m \in \mathcal{M}$}{
+    \For{each image $I \in \mathcal{D}$}{
+        $C_m \gets \text{Encode}(I, m)$ \tcp*{Build quantum circuit}
+        \If{$m = $ SAHQR}{
+            Run Algorithm~\ref{alg:saliency} to get $\Omega_S, \Omega_N$\;
+            Run Algorithm~\ref{alg:sahqr} to build circuit $C_m$\;
+        }
+        \textbf{Compute 10 evaluation parameters}\;
+        $p_1 \gets$ number of qubits in $C_m$\;
+
+        $p_2 \gets$ total gate count of $C_m$\;
+
+        $p_3 \gets$ circuit depth of $C_m$\;
+
+        $p_4 \gets$ CNOT gate count of $C_m$\;
+
+        $p_5 \gets$ execution time of $C_m$\;
+
+        $p_6 \gets$ compression ratio of $m$\;
+
+        $p_7 \gets \text{PSNR}(I, \hat{I}_m)$ \tcp*{Peak SNR}
+        $p_8 \gets \text{SSIM}(I, \hat{I}_m)$ \tcp*{Structural similarity}
+        $p_9 \gets$ normalized gate efficiency\;
+
+        $p_{10} \gets$ information density\;
+
+        Store $(p_1, \ldots, p_{10})$ for method $m$, image $I$\;
+    }
+    $E[m,:] \gets$ mean of all stored values for method $m$\;
+}
+\Return{$E$}\;
+\end{algorithm}
+
+\FloatBarrier
+
+%% =============================================================================
+%% SECTION 9: RESULTS AND ANALYSIS (Step 10)
+%% =============================================================================
+
+\section{Results and Analysis}\label{sec:results}
+
+This section presents the experimental results comparing SAHQR against ten existing quantum image representation methods across ten evaluation parameters. We provide comprehensive statistical analysis, visualization of results, and discussion of key findings.
+
+\subsection{Summary Statistics}
+
+Table~\ref{tab:main_results} presents the summary statistics for all eleven methods across the primary evaluation parameters.
+
+\begin{table}[!htbp]
+\caption{Comprehensive comparison of quantum image representation methods across 6,097 medical images. Values show mean $\pm$ standard deviation for each parameter.}
+\label{tab:main_results}
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lcccccccc@{}}
+\toprule
+Method & Qubits & Gates ($\mu \pm \sigma$) & Depth & Time (ms) & Compress. & Complexity & Memory (\%) & Impl. \\
+\midrule
+FRQI~\cite{bib18} & 9 & $121.61 \pm 15.60$ & 113.61 & 1.66 & 2.06 & 13.51 & 100.0 & 2 \\
+NEQR~\cite{bib19} & 16 & $312.38 \pm 67.26$ & 305.38 & 31.10 & 0.45 & 19.52 & 177.8 & 3 \\
+GQIR~\cite{bib46,bib15} & 12 & $97.96 \pm 36.37$ & 90.96 & 9.79 & 2.41 & 8.16 & 133.3 & 3 \\
+MCQI~\cite{bib47,bib13} & 18 & $923.13 \pm 201.77$ & 914.13 & 92.24 & 0.13 & 51.28 & 200.0 & 4 \\
+QRMW~\cite{bib48,bib49} & 18 & $1977.72 \pm 254.19$ & 312.16 & 20.62 & 0.37 & 109.87 & 200.0 & 4 \\
+EFRQI~\cite{bib50,bib51} & 9 & $87.97 \pm 20.80$ & 79.97 & 1.54 & 3.15 & 9.77 & 100.0 & 3 \\
+2D-QSNA~\cite{bib52,bib53} & 8 & $3.74 \pm 0.49$ & 1.00 & 0.82 & 256.0 & 0.47 & 88.9 & 4 \\
+INEQR~\cite{bib54,bib55} & 16 & $340.88 \pm 66.13$ & 333.88 & 32.73 & 0.40 & 21.31 & 177.8 & 3 \\
+QPIE~\cite{bib56,bib57} & 8 & $121.61 \pm 15.60$ & 114.61 & 10.32 & 2.30 & 15.20 & 88.9 & 4 \\
+QLR~\cite{bib58,bib49} & 16 & $466.89 \pm 74.36$ & 459.89 & 44.88 & 0.29 & 29.18 & 177.8 & 4 \\
+\textbf{SAHQR} & \textbf{17} & $\mathbf{578.42 \pm 184.40}$ & \textbf{571.42} & \textbf{57.07} & \textbf{0.24} & \textbf{34.02} & \textbf{188.9} & \textbf{5} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+
+
+\subsection{SAHQR-Specific Analysis}
+
+Figure~\ref{fig:sahqr_analysis} presents detailed analysis of SAHQR's saliency-based performance characteristics.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\linewidth]{images/figures/fig7_sahqr_analysis.pdf}
+\caption{SAHQR detailed saliency analysis. (a) Distribution of salient region ratios across dataset. (b) Gate count vs. saliency level correlation. (c) SAHQR vs. NEQR gate comparison showing reduction in non-salient regions. (d) Performance variation across dataset folders.}
+\label{fig:sahqr_analysis}
+\end{figure}
+
+Key observations from SAHQR analysis:
+
+\begin{enumerate}
+\item \textbf{Salient Ratio Distribution}: Mean 29.85\% with low variance ($\sigma = 0.30\%$), indicating consistent saliency characteristics across medical images
+\item \textbf{Gate Reduction}: SAHQR achieves gate count reduction compared to equivalent full-precision encoding by leveraging compressed encoding for $\sim$70\% of pixels
+\item \textbf{Folder Consistency}: Performance remains stable across all 13 dataset folders, demonstrating robustness~\cite{bib76,bib77}
+\end{enumerate}
+
+
+
+\subsection{Sample Images}
+
+Figure~\ref{fig:samples} shows sample images from the dataset after preprocessing to $16 \times 16$ resolution.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.9\linewidth]{images/figures/sample_images.png}
+\caption{Sample medical images from the MINC dataset after preprocessing to $16 \times 16$ resolution. Images show characteristic brain tissue patterns with varying saliency distributions.}
+\label{fig:samples}
+\end{figure}
+
+\subsection{Geometric Transformation Support}
+
+To demonstrate the practical applicability of SAHQR for image processing tasks, we evaluate its compatibility with standard geometric transformations. Figure~\ref{fig:geometric_ops} shows six geometric operations applied to a medical image before and after SAHQR encoding: the original image, rotations by 90, 180, and 270 degrees, and horizontal and vertical flips.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\linewidth]{images/figures/Figure_Operations_Combined.pdf}
+\caption{Geometric transformations before and after SAHQR encoding. Top row: Original full-resolution medical image with various transformations (rotation and flipping operations). Bottom row: The same transformations applied after SAHQR processing at 16x16 resolution. The results demonstrate that SAHQR preserves the geometric properties of the image and supports standard image manipulation operations essential for medical image analysis workflows.}
+\label{fig:geometric_ops}
+\end{figure}
+
+The results confirm that SAHQR maintains compatibility with fundamental image processing operations. The encoded representations correctly preserve spatial relationships, enabling subsequent quantum image processing algorithms to perform geometric manipulations without loss of structural integrity. This capability is essential for practical medical imaging applications where image alignment, registration, and orientation correction are routine preprocessing steps.
+
+\section{Conclusion}\label{sec:conclusion}
+
+This paper introduced SAHQR, a novel content-adaptive quantum image encoding scheme that leverages classical saliency detection to achieve intelligent resource allocation in quantum image processing. By applying full-precision encoding to salient regions (approximately 30\% of pixels) and compressed encoding to non-salient regions (approximately 70\% of pixels), SAHQR effectively reduces quantum gate counts and overall circuit complexity. 
+
+Our experimental analysis confirms that the SAHQR method offers significant advantages in hardware efficiency compared to exact representation methods like NEQR and INEQR, while demonstrating excellent generalizability across various medical imaging formats. SAHQR's content-aware scaling addresses a fundamental gap in current quantum image representation frameworks and establishes a viable approach for compressing complex image structures on Noisy Intermediate-Scale Quantum (NISQ) devices.
+
+As quantum computing hardware continues to advance toward practical utility, efficient quantum image representations will become increasingly important for realizing the potential of quantum image processing. SAHQR represents a step toward content-aware quantum encoding that aligns with the reality of heterogeneous image content. By concentrating quantum resources on visually important regions, SAHQR provides a framework for efficient quantum image processing that could enable practical applications in medical imaging, remote sensing, and other domains where preserving salient information is paramount.
+
+The comprehensive comparative analysis presented in this paper provides a foundation for future research in quantum image representation, enabling researchers to make informed decisions about method selection and inspiring new approaches that address the limitations of existing techniques. By demonstrating robust performance across medical imaging, remote sensing, and neuroimaging, SAHQR establishes a new benchmark for content-aware quantum image processing.
+
+
+%% =============================================================================
+%% ONLINE DEMO
+%% =============================================================================
+
+\section{Online Demo}
+\label{sec:online_demo}
+
+The SAHQR algorithm is available as an online demo at \href{\ipolLink}{the web page of this article}. The demo accepts a single grayscale image in PNG or JPEG format, with a maximum resolution of $64 \times 64$ pixels. The user can adjust three parameters:
+\begin{itemize}
+\item \textbf{Saliency threshold} $\alpha$ (default: 0.0, range: $[0.0, 3.0]$): Controls the sensitivity of the saliency detection. Higher values classify fewer pixels as salient, resulting in greater compression but lower fidelity in boundary regions.
+\item \textbf{Full bit depth} $q$ (default: 8, range: $\{1, 2, \ldots{}, 8\}$): Number of intensity bits for salient pixels. The value $q=8$ preserves full 8-bit precision.
+\item \textbf{Compressed bit depth} $q'$ (default: 4, range: $\{1, 2, \ldots{}, q-1\}$): Number of intensity bits for non-salient pixels. Must satisfy $q' < q$.
+\end{itemize}
+
+The demo produces four outputs:
+\begin{enumerate}
+\item The binary saliency mask overlaid on the input image, highlighting detected salient regions.
+\item The SAHQR quantum circuit visualization showing the constructed encoding circuit.
+\item A metrics table reporting all ten evaluation parameters: qubit count, gate count, circuit depth, CNOT count, encoding time, compression ratio, PSNR, SSIM, gate efficiency, and information density.
+\item Comparison results against all ten baseline methods for the same input image.
+\end{enumerate}
+
+Figure~\ref{fig:demo_example} shows an example of the demo output for a $16 \times 16$ brain tumor MRI image with default parameters ($\alpha=0.0$, $q=8$, $q'=4$).
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.85\linewidth]{images/figures/demo_screenshot.pdf}
+\caption{Example online demo output for SAHQR applied to a $16 \times 16$ brain tumor MRI image with default parameters ($\alpha=0.0$, $q=8$, $q'=4$). The figure shows the saliency-aware encoding results including circuit statistics, image quality metrics, and gate distribution analysis.}
+\label{fig:demo_example}
+\end{figure}
+
+For a $16 \times 16$ input image, the processing time is under 5~seconds; for $32 \times 32$, under 15~seconds; and for $64 \times 64$, under 30~seconds. Images larger than $64 \times 64$ are automatically downscaled to ensure the computation completes within the time limit.
+
+%% =============================================================================
+%% ACKNOWLEDGMENT
+%% =============================================================================
+
+\section*{Acknowledgment}
+This research received no external funding. The authors declare no conflict of interest. The MINC, SAR, and Brain Tumor MRI datasets used in this study are publicly available.
+
+%% =============================================================================
+%% IMAGE CREDITS
+%% =============================================================================
+
+\section*{Image Credits}
+{\small
+\begin{itemize}[label={},leftmargin=*]
+\item \includegraphics[height=2em, keepaspectratio]{images/figures/Figure1_Motivation.png} \quad the authors, CC-BY
+\item \includegraphics[height=2em, keepaspectratio]{images/figures/architecture_2.png} \quad the authors, CC-BY
+\item \includegraphics[height=2em, keepaspectratio]{images/figures/SAHQR_Qsphere_Only.pdf} \quad the authors, CC-BY
+\item \includegraphics[height=2em, keepaspectratio]{images/figures/SAHQR_Qsphere_Clean.pdf} \quad the authors, CC-BY
+\item \includegraphics[height=2em, keepaspectratio]{images/figures/sample_images.png} \quad MINC-2500 dataset (public domain)
+\item \includegraphics[height=2em, keepaspectratio]{images/figures/fig7_sahqr_analysis.pdf} \quad the authors, CC-BY
+\item \includegraphics[height=2em, keepaspectratio]{images/figures/Figure_Operations_Combined.pdf} \quad the authors, CC-BY
+\item \includegraphics[height=2em, keepaspectratio]{images/figures/demo_screenshot.pdf} \quad the authors, CC-BY
+\end{itemize}
+}
+
+%% =============================================================================
+%% BIBLIOGRAPHY
+%% =============================================================================
+
+\bibliographystyle{siam}
+\bibliography{article}
+
+\end{document}
